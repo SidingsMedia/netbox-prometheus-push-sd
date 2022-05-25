@@ -65,20 +65,12 @@ used.
 {
     "type": "{{ event }}",
     "name": "{{ data['name'] }}",
-    "include_uuid":
-        {% if (data["custom_fields"]["UUID"] is defined) and  (data["custom_fields"]["UUID"] is not null)%}
-            true,
-            "uuid": "{{ data['custom_fields']['UUID'] }}",
-        {% else %}
-            false,
-        {% endif %}
-    "use_dns_fqdn":
-        {% if (data["custom_fields"]["fqdn"] is defined) and (data["custom_fields"]["fqdn"] is not none) %}
-            true,
-            "fqdn": "{{ data['custom_fields']['fqdn'] }}",
-        {% else %}
-            false,
-        {% endif %}
+    {% if (data["custom_fields"]["UUID"] is defined) and  (data["custom_fields"]["UUID"] is not null)%}
+        "uuid": "{{ data['custom_fields']['UUID'] }}",
+    {% endif %}
+    {% if (data["custom_fields"]["fqdn"] is defined) and (data["custom_fields"]["fqdn"] is not none) %}
+        "fqdn": "{{ data['custom_fields']['fqdn'] }}",
+    {% endif %}
     "target":
         {% if (data["custom_fields"]["prometheus_target"] is defined) and (data["custom_fields"]["prometheus_target"] is not none) %}
             "{{ data["custom_fields"]["prometheus_target"] }}",

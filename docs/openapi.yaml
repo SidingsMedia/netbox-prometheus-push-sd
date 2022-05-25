@@ -1,0 +1,181 @@
+# SPDX-FileCopyrightText: Copyright (c) 2022 Sidings Media 
+# SPDX-License-Identifier: MIT
+
+openapi: 3.0.3
+
+info:
+  title: Netbox Prometheus Push SD
+  description: >
+    This API provides an endpoint for Netbox webhooks to enable Netbox
+    to act as a source of truth for the Prometheus monitoring system.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  version: 1.0.0
+
+servers:
+  - url: http://localhost/v1:8081
+    description: Local test environment
+
+components:
+  schemas:
+    GeneralSuccess:
+      type: object
+      properties:
+        message:
+          type: string
+
+    GeneralError:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+
+    TargetWebhook:
+      type: object
+      properties:
+        type:
+          type: string
+          description: The type of request
+          enum:
+            - created
+            - updated
+            - deleted
+        name:
+          type: string
+          description: Name of Netbox device
+        uuid:
+          type: string
+          format: uuid
+          description: >
+            The UUID of the device. If included it will be added as a
+            label in the Prometheus target.
+        fqdn:
+          type: string
+          format: fqdn
+          description: > 
+            Fuly qualified domain name of device. If included it will be
+            used instead of the devices IP address.
+        target:
+            type: string
+            pattern:
+              '/^.*:\/\/.*:([1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$/gm'
+            description: >
+              The specific target to use when scraping the endpoints. It
+              should be in the format <target name>://<host>:<port>
+              where host is optional.
+        location:
+          type: string
+          description: The location of the device to add as a label.
+        platform:
+          type: string
+          description: >
+            The Netbox platform assigned to the device. This will be
+            added as a Prometheus target label.
+        status:
+          type: string
+          description: >
+            The status of the device. This will be added as a Prometheus
+            target label.
+        role:
+          type: string
+          description: >
+            The Netbox role assigned to the device. This will be added
+            as a Prometheus target label.
+        vm:
+          type: boolean
+          description: Is the device a virtual machine?
+
+      required:
+        - type
+        - name
+        - target
+        - location
+        - platform
+        - status
+        - role
+        - vm
+
+      anyOf:
+        - properties:
+            ipv4:
+              type: string
+              format: ipv4
+              description: The IPv4 address of the host to monitor.
+          required:
+            - ipv4
+        - properties:
+            ipv6:
+              type: string
+              format: ipv6
+              description: The IPv6 address of the host to monitor.
+          required:
+            - ipv6
+      
+      example:
+        type: created
+        name: 1.web.example.com
+        uuid: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+        fqdn: 1.web.example.com
+        target: node://:9100
+        location: building-a
+        platform: debian-10-1
+        status: active
+        role: web
+        vm: false
+        ipv4: 198.51.100.42
+        ipv6: 2001:0db8:5b96:0000:0000:426f:8e17:642a       
+
+  responses:
+    GeneralSuccess:
+      description: General Success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/GeneralSuccess'
+          example:
+            message: Success
+
+    GeneralError:
+      description: General Error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/GeneralError'
+          example:
+            code: 500
+            message: Error
+    
+  securitySchemes:
+    api_key:
+      type: apiKey
+      name: X-API-KEY
+      in: header
+
+security:
+  - api_key: []
+
+paths:
+  /target:
+    post:
+      description: Update the service discovery file for Prometheus
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/TargetWebhook'       
+      responses:
+        '200':
+          $ref: '#/components/responses/GeneralSuccess'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralError'
+              example:
+                code: 401
+                message: API key invalid or not present
